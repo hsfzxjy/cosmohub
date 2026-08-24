@@ -27,7 +27,6 @@ jobs:
           path: |
             .cosmocc
             o
-            !o/uploads
           key: artifacts-cosmocc_${{ steps.get-tag.outputs.TAG }}
           restore-keys: |
             artifacts-cosmocc_
