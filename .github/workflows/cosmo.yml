@@ -112,6 +112,7 @@ jobs:
   cosmo-success:
     needs: build-cosmo
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     steps:
       - name: parse build-cosmo state
         # both success and skipped should be regarded as valid
