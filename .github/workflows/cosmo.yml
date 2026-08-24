@@ -25,8 +25,8 @@ jobs:
         id: cache
         with:
           path: |
-            .cosmocc
-            o
+            ./.cosmocc
+            ./o
           key: artifacts-cosmocc_${{ steps.get-tag.outputs.TAG }}
           restore-keys: |
             artifacts-cosmocc_
