@@ -122,10 +122,11 @@ elif [ "$1"x == "pack-cosmo"x ]; then
     pack "$OUT" "$IN"
     NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
     if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
-      echo "Warning: SHA256 mismatch for $OUT"
-      echo "Old: $OLD_SHA256"
-      echo "New: $NEW_SHA256"
+      log "Warning: SHA256 mismatch for $OUT"
+      log "Old: $OLD_SHA256"
+      log "New: $NEW_SHA256"
     fi
+    echo "o/$OUT"
   done
 elif [ "$1"x == "build-gcc"x ]; then
   bootstrap

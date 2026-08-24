@@ -64,9 +64,16 @@ jobs:
         run: bash ./builder.sh build-cosmo
 
       - name: pack cosmo
+        id: pack-cosmo
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bash ./builder.sh pack-cosmo
+        run: |
+          files=$(bash ./builder.sh pack-cosmo)
+          {
+            echo "files<<EOF"
+            echo "$files"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: save mtimes
         working-directory: o/cosmopolitan
@@ -85,8 +92,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ steps.get-tag.outputs.TAG }}"
-          files: |
-            o/uploads/*.tgz
-            o/uploads/*.cosmoup
+          files: ${{ steps.pack-cosmo.outputs.files }}
           fail_on_unmatched_files: true
           prerelease: true
