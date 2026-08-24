@@ -14,6 +14,7 @@ function log() {
 GOPATH=$(go env GOPATH)
 COSMOUP=$GOPATH/bin/cosmoup
 log "Found cosmoup at" $COSMOUP
+log $(go version)
 
 [ -x "$COSMOUP" ] || go install github.com/hsfzxjy/cosmoup/cmd/cosmoup@latest
 
@@ -179,7 +180,7 @@ elif [ "$1"x == "build-gcc"x ]; then
 
   export C_INCLUDE_PATH=$WORK_DIR/.cosmocc/include/third_party/zlib
   export CPLUS_INCLUDE_PATH=$WORK_DIR/.cosmocc/include/third_party/zlib
-  find o -name 'built.fat' -delete
+  find o -name 'built.fat' -delete || true
   rm -rf results/
   shift
   make "$target"
