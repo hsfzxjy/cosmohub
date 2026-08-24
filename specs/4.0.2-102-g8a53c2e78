@@ -17,5 +17,6 @@ x86_64-lib-optlinux
 x86_64-lib-sysv
 x86_64-lib-tiny
 x86_64-lib-tinylinux
+zlib
 EOF
 }
