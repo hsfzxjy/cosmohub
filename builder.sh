@@ -1,15 +1,19 @@
 #!/bin/bash
 
-set -xe
+set -e
 
 ROOT_DIR=$(cd $(dirname $0) && pwd)
 WORK_DIR=$ROOT_DIR/o
 mkdir -p $WORK_DIR
 cd $WORK_DIR
 
+function log() {
+  echo "$@" >&2
+}
+
 GOPATH=$(go env GOPATH)
 COSMOUP=$GOPATH/bin/cosmoup
-echo "Found cosmoup at" $COSMOUP
+log "Found cosmoup at" $COSMOUP
 
 [ -x "$COSMOUP" ] || go install github.com/hsfzxjy/cosmoup/cmd/cosmoup@latest
 
@@ -18,14 +22,14 @@ function bootstrap() {
   URL="https://github.com/jart/cosmopolitan/releases/download/3.9.2/cosmocc-3.9.2.zip"
 
   if [ -d .cosmocc ]; then
-    echo ".cosmocc already exists."
+    log ".cosmocc already exists."
     return
   fi
 
   if sha256sum cosmocc.zip 2>/dev/null | grep -q $SHA256; then
-    echo "cosmocc.zip already exists and is valid."
+    log "cosmocc.zip already exists and is valid."
   else
-    echo "Downloading cosmocc.zip..."
+    log "Downloading cosmocc.zip..."
     wget "$URL" -O cosmocc.zip
   fi
 
@@ -50,7 +54,6 @@ function setup-cosmopolitan() {
   ln -s "$PWD/../.cosmocc" .cosmocc/3.9.2 || true
   ln -s "$PWD/../.cosmocc" .cosmocc/current || true
   echo "echo Skip download cosmocc" >build/download-cosmocc.sh
-
 }
 
 function setup-gcc() {
@@ -72,10 +75,10 @@ function pack() {
 
 function get_cosmo_hash() {
   if [ -z "$COSMO_HASH" ]; then
-    echo "COSMO_HASH is not set. Using first item from specs/versions"
+    log "COSMO_HASH is not set. Using first item from specs/versions"
     COSMO_HASH=$(head -n 1 "$ROOT_DIR/specs/versions")
   fi
-  echo "Using COSMO_HASH=$COSMO_HASH"
+  log "Using COSMO_HASH=$COSMO_HASH"
 }
 
 if [ "$1"x == "get-tag"x ]; then
@@ -99,7 +102,7 @@ elif [ "$1"x == "pack-cosmo"x ]; then
   for x in $COSMO_ARTIFACTS; do
     IN="cosmopolitan/cosmoup/$x"
     if [ ! -d "$IN" ]; then
-      echo "Directory $IN does not exist."
+      log "Directory $IN does not exist."
       exit 1
     fi
   done
@@ -107,14 +110,14 @@ elif [ "$1"x == "pack-cosmo"x ]; then
   for x in $COSMO_ARTIFACTS; do
     IN="cosmopolitan/cosmoup/$x"
     if [ ! -d "$IN" ]; then
-      echo "Directory $IN does not exist."
+      log "Directory $IN does not exist."
       exit 1
     fi
     OUT="$OUTDIR/cosmo-$x.tgz"
     if [ -f "$OUT" ]; then
       OLD_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
     fi
-    echo "Packing $IN to $OUT"
+    log "Packing $IN to $OUT"
     pack "$OUT" "$IN"
     NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
     if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
@@ -139,23 +142,23 @@ elif [ "$1"x == "pack-gcc"x ]; then
   for x in "$@"; do
     IN="cosmo-gcc-builder/results/$x"
     if [ ! -d "$IN" ]; then
-      echo "Directory $IN does not exist."
+      log "Directory $IN does not exist."
       exit 1
     fi
     OUT="$OUTDIR/$x.tgz"
     if [ -f "$OUT" ]; then
       OLD_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
     fi
-    echo "Packing $IN to $OUT"
+    log "Packing $IN to $OUT"
     pack "$OUT" "$IN"
     NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
     if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
-      echo "Warning: SHA256 mismatch for $OUT"
-      echo "Old: $OLD_SHA256"
-      echo "New: $NEW_SHA256"
+      log "Warning: SHA256 mismatch for $OUT"
+      log "Old: $OLD_SHA256"
+      log "New: $NEW_SHA256"
     fi
   done
 else
-  echo "Unknown command: $1"
+  log "Unknown command: $1"
   exit 1
 fi
