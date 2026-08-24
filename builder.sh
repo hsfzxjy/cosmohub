@@ -18,6 +18,14 @@ log $(go version)
 
 [ -x "$COSMOUP" ] || go install github.com/hsfzxjy/cosmoup/cmd/cosmoup@latest
 
+if [ ! -z ${GITHUB_ACTIONS+x} ]; then
+  sudo apt-get install -y ca-certificates libssl-dev \
+    qemu-user qemu-system-x86 qemu-system-arm qemu-utils qemu-user-static \
+    texinfo groff libtool \
+    cmake ninja-build bison zip \
+    pkg-config build-essential autoconf re2c 1>&2
+fi
+
 function bootstrap() {
   SHA256="f4ff13af65fcd309f3f1cfd04275996fb7f72a4897726628a8c9cf732e850193"
   URL="https://github.com/jart/cosmopolitan/releases/download/3.9.2/cosmocc-3.9.2.zip"

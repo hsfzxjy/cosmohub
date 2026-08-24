@@ -5,6 +5,8 @@ exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-ar %
 exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-ar %
 exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-g++ %
 exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-g++ %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-cc %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-cc %
 link ${BOOTSTRAP} libexec/gcc/aarch64-linux-cosmo/14.1.0/ %
 link ${BOOTSTRAP} libexec/gcc/x86_64-linux-cosmo/14.1.0/ %
 
