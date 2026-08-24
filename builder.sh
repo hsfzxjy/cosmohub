@@ -71,7 +71,40 @@ function setup-gcc() {
 function pack() {
   OUT=$1
   IN=$2
+  local OLD_SHA256=
+  if [ ! -d "$IN" ]; then
+    log "Directory $IN does not exist."
+    exit 1
+  fi
+  if [ -f "$OUT" ]; then
+    OLD_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
+  fi
+  log "Packing $IN to $OUT"
   tar -czf "$OUT" --mtime='UTC 1970-01-01' -C "$IN" --owner 0 --group=0 --numeric-owner --sort=name .
+  NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
+  if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
+    log "Warning: SHA256 mismatch for $OUT"
+    log "Old: $OLD_SHA256"
+    log "New: $NEW_SHA256"
+  fi
+  echo "o/$OUT"
+}
+
+function print_should_build_result() {
+  if ! assets=$(gh release view "${COSMO_HASH}" --json assets --jq '.assets[].name'); then
+    log "Release ${COSMO_HASH} does not exist."
+    echo "true"
+    exit 0
+  fi
+  for artifact in $@; do
+    local file="$artifact.tgz"
+    if ! echo "$assets" | grep -q "$file"; then
+      log "Release ${COSMO_HASH} is missing asset $file."
+      echo "true"
+      exit 0
+    fi
+  done
+  echo "false"
 }
 
 function get_cosmo_hash() {
@@ -82,105 +115,96 @@ function get_cosmo_hash() {
   log "Using COSMO_HASH=$COSMO_HASH"
 }
 
+function array_contains() {
+  local array="$1[@]"
+  local seeking=$2
+  local in=1
+  for element in ${!array}; do
+    if [[ $element == $seeking ]]; then
+      in=0
+      break
+    fi
+  done
+  return $in
+}
+
+function check_gcc_target_valid() {
+  local target="$1"
+  local all_targets=$(gcc_targets)
+  if ! array_contains all_targets "$target"; then
+    log "Unknown target: $target, available targets are:"
+    log "$all_targets"
+    exit 1
+  fi
+}
+
+get_cosmo_hash
+source "$ROOT_DIR/specs/$COSMO_HASH"
+
 if [ "$1"x == "get-tag"x ]; then
-  get_cosmo_hash
   echo "$COSMO_HASH"
 elif [ "$1"x == "prepare-cosmo"x ]; then
-  get_cosmo_hash
   bootstrap
   setup-cosmopolitan
 elif [ "$1"x == "build-cosmo"x ]; then
-  get_cosmo_hash
   bootstrap
   setup-cosmopolitan
   bash tool/cosmoup/package.sh
 elif [ "$1"x == "pack-cosmo"x ]; then
   OUTDIR="uploads/"
-  get_cosmo_hash
-  source "$ROOT_DIR/specs/$COSMO_HASH"
   COSMO_ARTIFACTS=$(cosmo_artifacts)
   # check if all artifacts exist
-  for x in $COSMO_ARTIFACTS; do
-    IN="cosmopolitan/cosmoup/$x"
-    if [ ! -d "$IN" ]; then
-      log "Directory $IN does not exist."
-      exit 1
-    fi
-  done
   mkdir -p "$OUTDIR"
   for x in $COSMO_ARTIFACTS; do
     IN="cosmopolitan/cosmoup/$x"
-    if [ ! -d "$IN" ]; then
-      log "Directory $IN does not exist."
-      echo "false"
-      exit 0
-    fi
     OUT="$OUTDIR/cosmo-$x.tgz"
-    if [ -f "$OUT" ]; then
-      OLD_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
-    fi
-    log "Packing $IN to $OUT"
     pack "$OUT" "$IN"
-    NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
-    if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
-      log "Warning: SHA256 mismatch for $OUT"
-      log "Old: $OLD_SHA256"
-      log "New: $NEW_SHA256"
-    fi
-    echo "o/$OUT"
   done
 elif [ "$1"x == "should-build-cosmo"x ]; then
-  get_cosmo_hash
-  source "$ROOT_DIR/specs/$COSMO_HASH"
-  COSMO_ARTIFACTS=$(cosmo_artifacts)
-  if ! assets=$(gh release view "${COSMO_HASH}" --json assets --jq '.assets[].name'); then
-    log "Release ${COSMO_HASH} does not exist."
-    echo "true"
-    exit 0
-  fi
-  for artifact in $COSMO_ARTIFACTS; do
-    file="cosmo-$artifact.tgz"
-    if ! echo "$assets" | grep -q "$file"; then
-      log "Release ${COSMO_HASH} is missing asset $file."
-      echo "true"
-      exit 0
-    fi
+  COSMO_ARTIFACTS=()
+  for x in $(cosmo_artifacts); do
+    COSMO_ARTIFACTS+=("cosmo-$x")
   done
-  echo "false"
+  print_should_build_result $COSMO_ARTIFACTS
 
 # === GCC related commands ===
+elif [ "$1"x == "prepare-gcc"x ]; then
+  bootstrap
+  setup-gcc
 elif [ "$1"x == "build-gcc"x ]; then
   bootstrap
   setup-gcc
+  target="$2"
+  check_gcc_target_valid "$target"
+
   export C_INCLUDE_PATH=$WORK_DIR/.cosmocc/include/third_party/zlib
   export CPLUS_INCLUDE_PATH=$WORK_DIR/.cosmocc/include/third_party/zlib
   find o -name 'built.fat' -delete
   rm -rf results/
   shift
-  make "$@"
+  make "$target"
 elif [ "$1"x == "pack-gcc"x ]; then
+  target="$2"
+  check_gcc_target_valid "$target"
+
   OUTDIR="uploads/"
   mkdir -p "$OUTDIR"
-  shift
-  for x in "$@"; do
+
+  artifacts=$(get_gcc_artifacts "$target")
+  for x in $artifacts; do
     IN="cosmo-gcc-builder/results/$x"
-    if [ ! -d "$IN" ]; then
-      log "Directory $IN does not exist."
-      exit 1
-    fi
     OUT="$OUTDIR/$x.tgz"
-    if [ -f "$OUT" ]; then
-      OLD_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
-    fi
-    log "Packing $IN to $OUT"
     pack "$OUT" "$IN"
-    NEW_SHA256=$(sha256sum "$OUT" | awk '{print $1}')
-    if [ ! -z "$OLD_SHA256" ] && [ "$OLD_SHA256" != "$NEW_SHA256" ]; then
-      log "Warning: SHA256 mismatch for $OUT"
-      log "Old: $OLD_SHA256"
-      log "New: $NEW_SHA256"
-    fi
   done
+elif [ "$1"x == "should-build-gcc"x ]; then
+  target="$2"
+  check_gcc_target_valid "$target"
+
+  artifacts=$(get_gcc_artifacts "$target")
+  print_should_build_result $artifacts
+
+elif [ "$1"x == "gcc-targets"x ]; then
+  jq -R -s -c '[scan("\\S+")]' < <(gcc_targets)
 else
   log "Unknown command: $1"
   exit 1

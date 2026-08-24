@@ -20,3 +20,24 @@ x86_64-lib-tinylinux
 zlib
 EOF
 }
+
+function gcc_targets() {
+  local archs="x86_64 aarch64"
+  for proj in binutils/2.47 gcc-portcosmo/16.2.0; do
+    for arch in $archs; do
+      echo "$proj/$arch"
+    done
+  done
+}
+
+function get_gcc_artifacts() {
+  local target="$1"
+  # split at last slash
+  local proj="${target%/*}"
+  local arch="${target##*/}"
+  # replace / with - in proj
+  local proj="${proj//\//-}"
+  for suffix in "" "-dbg"; do
+    echo "$arch-$proj$suffix"
+  done
+}

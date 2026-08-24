@@ -109,3 +109,76 @@ jobs:
           files: ${{ steps.pack-cosmo.outputs.files }}
           fail_on_unmatched_files: true
           prerelease: true
+  cosmo-success:
+    needs: build-cosmo
+    runs-on: ubuntu-latest
+    steps:
+      - name: parse build-cosmo state
+        # both success and skipped should be regarded as valid
+        run: |
+          if [ "${{ needs.build-cosmo.result }}" != "success" ] && [ "${{ needs.build-cosmo.result }}" != "skipped" ]; then
+            echo "build-cosmo failed, exiting"
+            exit 1
+          fi
+  define-gcc-targets:
+    needs: cosmo-success
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.get-targets.outputs.targets }}
+    steps:
+      - name: checkout the repository
+        uses: actions/checkout@master
+      - name: get gcc targets
+        id: get-targets
+        run: |
+          echo "targets=$(bash ./builder.sh gcc-targets)" >> "$GITHUB_OUTPUT"
+  build-gcc:
+    needs: define-gcc-targets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        target: ${{fromJSON(needs.define-gcc-targets.outputs.targets)}}
+    steps:
+      - name: checkout the repository
+        uses: actions/checkout@master
+
+      - name: get tag
+        id: get-tag
+        run: |
+          echo "TAG=$(bash ./builder.sh get-tag)" >> "$GITHUB_OUTPUT"
+
+      - name: check should build gcc
+        id: should-build-gcc
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "should-build-gcc=$(bash ./builder.sh should-build-gcc ${{ matrix.target }})" >> "$GITHUB_OUTPUT"
+
+      - name: build gcc
+        if: ${{ steps.should-build-gcc.outputs.should-build-gcc == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash ./builder.sh build-gcc ${{ matrix.target }}
+
+      - name: pack gcc
+        if: ${{ steps.should-build-gcc.outputs.should-build-gcc == 'true' }}
+        id: pack-gcc
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=$(bash ./builder.sh pack-gcc ${{ matrix.target }})
+          {
+            echo "files<<EOF"
+            echo "$files"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: upload binaries to release
+        if: ${{ steps.should-build-gcc.outputs.should-build-gcc == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ steps.get-tag.outputs.TAG }}"
+          files: ${{ steps.pack-gcc.outputs.files }}
+          fail_on_unmatched_files: true
