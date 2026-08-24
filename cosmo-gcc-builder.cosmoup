@@ -1,0 +1,16 @@
+set BOOTSTRAP ../.cosmocc/
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-gcc %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-gcc %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-ar %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-ar %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-g++ %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-g++ %
+link ${BOOTSTRAP} libexec/gcc/aarch64-linux-cosmo/14.1.0/ %
+link ${BOOTSTRAP} libexec/gcc/x86_64-linux-cosmo/14.1.0/ %
+
+set COSMO_BUILT ../uploads/cosmo-
+import ${COSMO_BUILT}bin.tgz
+import ${COSMO_BUILT}include.tgz
+import ${COSMO_BUILT}x86_64-lib.tgz
+import ${COSMO_BUILT}aarch64-lib.tgz
+import ${COSMO_BUILT}zlib.tgz

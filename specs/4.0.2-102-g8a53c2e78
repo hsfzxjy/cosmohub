@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function cosmo_artifacts() {
+  cat <<EOF
+aarch64-lib
+aarch64-lib-dbg
+aarch64-lib-optlinux
+aarch64-lib-sysv
+aarch64-lib-tiny
+aarch64-lib-tinylinux
+bin
+include
+lib
+x86_64-lib
+x86_64-lib-dbg
+x86_64-lib-optlinux
+x86_64-lib-sysv
+x86_64-lib-tiny
+x86_64-lib-tinylinux
+EOF
+}

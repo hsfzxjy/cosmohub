@@ -1,0 +1,92 @@
+on:
+  workflow_dispatch:
+  push:
+  create:
+  release:
+    types: [created]
+
+name: Handle Release
+jobs:
+  build-cosmoup:
+    if: "${{ ( github.event_name != 'push' ) || startsWith(github.event.head_commit.message, '[[ci]]') }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: checkout the repository
+        uses: actions/checkout@master
+
+      - name: get tag
+        id: get-tag
+        run: |
+          echo "TAG=$(bash ./builder.sh get-tag)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/restore@v4
+        id: cache
+        with:
+          path: |
+            .cosmocc
+            o
+            !o/uploads
+          key: artifacts-cosmocc_${{ steps.get-tag.outputs.TAG }}
+          restore-keys: |
+            artifacts-cosmocc_
+
+      - name: restore timestamps
+        uses: hsfzxjy/git-restore-mtime-action@master
+        with:
+          working-directory: "o/cosmopolitan"
+
+      - name: prepare cosmo repo
+        run: bash ./builder.sh prepare-cosmo
+
+      - name: restore build artifacts mtime
+        if: steps.cache.outputs.cache-hit == 'true'
+        working-directory: o/cosmopolitan
+        run: |
+          LAST_HEAD=HEAD
+          if [ -f o/.HEAD ]; then
+            LAST_HEAD=$(cat o/.HEAD)
+          fi
+          echo HEAD: $(git rev-parse HEAD)
+          echo LAST_HEAD: "$LAST_HEAD"
+          if git merge-base --is-ancestor "$LAST_HEAD" HEAD; then
+            while read mtime file; do
+              [ -f "$file" ] && touch -d "@$mtime" "$file"
+            done < o/.mtimes
+          else
+            rm o/
+          fi
+
+      - name: build cosmo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash ./builder.sh build-cosmo
+
+      - name: pack cosmo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash ./builder.sh pack-cosmo
+
+      - name: save mtimes
+        working-directory: o/cosmopolitan
+        run: |
+          find o -type f -exec stat -c "%Y %n" {} \; > o/.mtimes
+          git rev-parse HEAD > o/.HEAD
+
+      - uses: actions/cache/save@v4
+        with:
+          path: |
+            ./.cosmocc
+            ./o
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ steps.get-tag.outputs.TAG }}"
+          files: |
+            o/uploads/*.tgz
+            o/uploads/*.cosmoup
+          fail_on_unmatched_files: true
+          prerelease: true
