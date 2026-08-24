@@ -51,6 +51,7 @@ function setup-cosmopolitan() {
     git fetch origin master
     git checkout $COSMO_HASH || exit 1
   fi
+  mkdir -p .cosmocc
   ln -s "$PWD/../.cosmocc" .cosmocc/3.9.2 || true
   ln -s "$PWD/../.cosmocc" .cosmocc/current || true
   echo "echo Skip download cosmocc" >build/download-cosmocc.sh
