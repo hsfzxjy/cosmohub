@@ -7,8 +7,21 @@ on:
 
 name: Handle Release
 jobs:
-  build-cosmoup:
+  check-cosmo:
     if: "${{ ( github.event_name != 'push' ) || startsWith(github.event.head_commit.message, '[[ci]]') }}"
+    runs-on: ubuntu-latest
+    outputs:
+      should-build-cosmo: ${{ steps.should-build.outputs.should-build-cosmo }}
+    steps:
+      - name: checkout the repository
+        uses: actions/checkout@master
+      - name: check if should build cosmo
+        id: should-build
+        run: |
+          echo "should-build-cosmo=$(bash ./builder.sh should-build-cosmo)" >> "$GITHUB_OUTPUT"
+  build-cosmo:
+    needs: check-cosmo
+    if: needs.check-cosmo.outputs.should-build-cosmo == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

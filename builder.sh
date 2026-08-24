@@ -128,6 +128,26 @@ elif [ "$1"x == "pack-cosmo"x ]; then
     fi
     echo "o/$OUT"
   done
+elif [ "$1"x == "should-build-cosmo"x ]; then
+  get_cosmo_hash
+  source "$ROOT_DIR/specs/$COSMO_HASH"
+  COSMO_ARTIFACTS=$(cosmo_artifacts)
+  if ! assets=$(gh release view "${COSMO_HASH}" --json assets --jq '.assets[].name'); then
+    log "Release ${COSMO_HASH} does not exist."
+    echo "false"
+    exit 0
+  fi
+  for artifact in $COSMO_ARTIFACTS; do
+    file="cosmo-$artifact.tgz"
+    if ! echo "$assets" | grep -q "$file"; then
+      log "Release ${COSMO_HASH} is missing asset $file."
+      echo "false"
+      exit 0
+    fi
+  done
+  echo "true"
+
+# === GCC related commands ===
 elif [ "$1"x == "build-gcc"x ]; then
   bootstrap
   setup-gcc
