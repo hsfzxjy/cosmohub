@@ -135,18 +135,18 @@ elif [ "$1"x == "should-build-cosmo"x ]; then
   COSMO_ARTIFACTS=$(cosmo_artifacts)
   if ! assets=$(gh release view "${COSMO_HASH}" --json assets --jq '.assets[].name'); then
     log "Release ${COSMO_HASH} does not exist."
-    echo "false"
+    echo "true"
     exit 0
   fi
   for artifact in $COSMO_ARTIFACTS; do
     file="cosmo-$artifact.tgz"
     if ! echo "$assets" | grep -q "$file"; then
       log "Release ${COSMO_HASH} is missing asset $file."
-      echo "false"
+      echo "true"
       exit 0
     fi
   done
-  echo "true"
+  echo "false"
 
 # === GCC related commands ===
 elif [ "$1"x == "build-gcc"x ]; then
