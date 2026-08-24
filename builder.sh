@@ -112,7 +112,8 @@ elif [ "$1"x == "pack-cosmo"x ]; then
     IN="cosmopolitan/cosmoup/$x"
     if [ ! -d "$IN" ]; then
       log "Directory $IN does not exist."
-      exit 1
+      echo "false"
+      exit 0
     fi
     OUT="$OUTDIR/cosmo-$x.tgz"
     if [ -f "$OUT" ]; then

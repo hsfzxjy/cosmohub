@@ -17,6 +17,8 @@ jobs:
         uses: actions/checkout@master
       - name: check if should build cosmo
         id: should-build
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           echo "should-build-cosmo=$(bash ./builder.sh should-build-cosmo)" >> "$GITHUB_OUTPUT"
   build-cosmo:
