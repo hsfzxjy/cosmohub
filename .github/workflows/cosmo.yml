@@ -32,13 +32,13 @@ jobs:
           restore-keys: |
             artifacts-cosmocc_
 
+      - name: prepare cosmo repo
+        run: bash ./builder.sh prepare-cosmo
+
       - name: restore timestamps
         uses: hsfzxjy/git-restore-mtime-action@master
         with:
           working-directory: "o/cosmopolitan"
-
-      - name: prepare cosmo repo
-        run: bash ./builder.sh prepare-cosmo
 
       - name: restore build artifacts mtime
         if: steps.cache.outputs.cache-hit == 'true'
