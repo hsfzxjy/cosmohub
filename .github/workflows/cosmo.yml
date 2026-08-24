@@ -7,23 +7,23 @@ on:
 
 name: Handle Release
 jobs:
-  check-cosmo:
-    if: "${{ ( github.event_name != 'push' ) || startsWith(github.event.head_commit.message, '[[ci]]') }}"
-    runs-on: ubuntu-latest
-    outputs:
-      should-build-cosmo: ${{ steps.should-build.outputs.should-build-cosmo }}
-    steps:
-      - name: checkout the repository
-        uses: actions/checkout@master
-      - name: check if should build cosmo
-        id: should-build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "should-build-cosmo=$(bash ./builder.sh should-build-cosmo)" >> "$GITHUB_OUTPUT"
+  # check-cosmo:
+  #   if: "${{ ( github.event_name != 'push' ) || startsWith(github.event.head_commit.message, '[[ci]]') }}"
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     should-build-cosmo: ${{ steps.should-build.outputs.should-build-cosmo }}
+  #   steps:
+  #     - name: checkout the repository
+  #       uses: actions/checkout@master
+  #     - name: check if should build cosmo
+  #       id: should-build
+  #       env:
+  #         GH_TOKEN: ${{ github.token }}
+  #       run: |
+  #         echo "should-build-cosmo=$(bash ./builder.sh should-build-cosmo)" >> "$GITHUB_OUTPUT"
   build-cosmo:
-    needs: check-cosmo
-    if: needs.check-cosmo.outputs.should-build-cosmo == 'true'
+    if: "${{ ( github.event_name != 'push' ) || startsWith(github.event.head_commit.message, '[[ci]]') }}"
+
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,8 +36,16 @@ jobs:
         run: |
           echo "TAG=$(bash ./builder.sh get-tag)" >> "$GITHUB_OUTPUT"
 
+      - name: check if should build cosmo
+        id: should-build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "should-build-cosmo=$(bash ./builder.sh should-build-cosmo)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/cache/restore@v4
         id: cache
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         with:
           path: |
             ./.cosmocc
@@ -47,15 +55,17 @@ jobs:
             artifacts-cosmocc_
 
       - name: prepare cosmo repo
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         run: bash ./builder.sh prepare-cosmo
 
       - name: restore timestamps
+
         uses: hsfzxjy/git-restore-mtime-action@master
         with:
           working-directory: "o/cosmopolitan"
 
       - name: restore build artifacts mtime
-        if: steps.cache.outputs.cache-hit == 'true'
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' && steps.cache.outputs.cache-hit == 'true' }}
         working-directory: o/cosmopolitan
         run: |
           LAST_HEAD=HEAD
@@ -73,12 +83,14 @@ jobs:
           fi
 
       - name: build cosmo
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: bash ./builder.sh build-cosmo
 
       - name: pack cosmo
         id: pack-cosmo
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -90,12 +102,14 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: save mtimes
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         working-directory: o/cosmopolitan
         run: |
           find o -type f -exec stat -c "%Y %n" {} \; > o/.mtimes
           git rev-parse HEAD > o/.HEAD
 
       - uses: actions/cache/save@v4
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         with:
           path: |
             ./.cosmocc
@@ -103,26 +117,27 @@ jobs:
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
       - name: upload binaries to release
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "${{ steps.get-tag.outputs.TAG }}"
           files: ${{ steps.pack-cosmo.outputs.files }}
           fail_on_unmatched_files: true
           prerelease: true
-  cosmo-success:
-    needs: build-cosmo
-    runs-on: ubuntu-latest
-    if: ${{ always() }}
-    steps:
-      - name: parse build-cosmo state
-        # both success and skipped should be regarded as valid
-        run: |
-          if [ "${{ needs.build-cosmo.result }}" != "success" ] && [ "${{ needs.build-cosmo.result }}" != "skipped" ]; then
-            echo "build-cosmo failed, exiting"
-            exit 1
-          fi
+  # cosmo-success:
+  #   needs: build-cosmo
+  #   runs-on: ubuntu-latest
+  #   if: ${{ always() }}
+  #   steps:
+  #     - name: parse build-cosmo state
+  #       # both success and skipped should be regarded as valid
+  #       run: |
+  #         if [ "${{ needs.build-cosmo.result }}" != "success" ] && [ "${{ needs.build-cosmo.result }}" != "skipped" ]; then
+  #           echo "build-cosmo failed, exiting"
+  #           exit 1
+  #         fi
   define-gcc-targets:
-    needs: cosmo-success
+    needs: build-cosmo
     runs-on: ubuntu-latest
     outputs:
       targets: ${{ steps.get-targets.outputs.targets }}
