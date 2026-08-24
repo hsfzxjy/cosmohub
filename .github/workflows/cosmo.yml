@@ -59,7 +59,7 @@ jobs:
         run: bash ./builder.sh prepare-cosmo
 
       - name: restore timestamps
-
+        if: ${{ steps.should-build.outputs.should-build-cosmo == 'true' }}
         uses: hsfzxjy/git-restore-mtime-action@master
         with:
           working-directory: "o/cosmopolitan"
