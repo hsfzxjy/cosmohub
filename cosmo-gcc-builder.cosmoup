@@ -7,11 +7,18 @@ exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-g++ %
 exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-g++ %
 exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-cc %
 exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-cc %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-as %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-as %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-ld %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-ld %
+exec ${BOOTSTRAP} bin/aarch64-linux-cosmo-ld.bfd %
+exec ${BOOTSTRAP} bin/x86_64-linux-cosmo-ld.bfd %
 link ${BOOTSTRAP} libexec/gcc/aarch64-linux-cosmo/14.1.0/ %
 link ${BOOTSTRAP} libexec/gcc/x86_64-linux-cosmo/14.1.0/ %
 
-set COSMO_BUILT https://github.com/hsfzxjy/cosmohub/releases/download/4.0.2-102-g8a53c2e78/cosmo-
+set COSMO_BUILT https://github.com/hsfzxjy/cosmohub/releases/download/@COSMO_HASH@/cosmo-
 import ${COSMO_BUILT}bin.tgz
+import ${COSMO_BUILT}lib.tgz
 import ${COSMO_BUILT}include.tgz
 import ${COSMO_BUILT}x86_64-lib.tgz
 import ${COSMO_BUILT}aarch64-lib.tgz

@@ -73,7 +73,9 @@ function setup-gcc() {
   git fetch origin master
   git checkout origin/master || exit 1
 
-  cp "$ROOT_DIR/cosmo-gcc-builder.cosmoup" root.cosmoup
+  # replace @COSMO_HASH@ with the actual COSMO_HASH in the cosmoup file
+  sed "s/@COSMO_HASH@/$COSMO_HASH/g" "$ROOT_DIR/cosmo-gcc-builder.cosmoup" > root.cosmoup
+
   "$COSMOUP"
 }
 
